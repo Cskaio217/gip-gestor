@@ -1,73 +1,55 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { User } from '../types'
+import { createContext, useContext, useState } from 'react'
 import { supabase } from '../services/supabase'
 
-interface AuthContextValue {
-  user: User | null
-  loading: boolean
-  login: (email: string, password: string) => Promise<boolean>
-  logout: () => Promise<void>
-  isAdmin: boolean
-  isConsultor: boolean
-  isCliente: boolean
-}
+const AuthContext = createContext<any>(null)
 
-const AuthContext = createContext<AuthContextValue | null>(null)
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]       = useState<User | null>(null)
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
-  async function login(email: string, password: string): Promise<boolean> {
+  async function login(email: string, password: string) {
     setLoading(true)
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error || !data.user) return false
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/login`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ email, password })
+        }
+      )
 
-      const meta = data.user.user_metadata ?? {}
-      setUser({
-        id:             data.user.id,
-        nome:           (meta.nome          as string) ?? data.user.email?.split('@')[0] ?? 'Usuário',
-        login:          (meta.login         as string) ?? data.user.email?.split('@')[0] ?? '',
-        senha:          '',
-        email:          data.user.email ?? '',
-        cargo:          (meta.cargo         as string) ?? '',
-        perfil:         ((meta.perfil       as string) ?? 'consultor') as User['perfil'],
-        especialidade:  (meta.especialidade as string) ?? '',
-        ativo:          true,
-        projectsLinked: [],
-        permissions:    {},
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'E-mail ou senha inválidos')
+
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
       })
-      return true
+
+      setUser(data.user)
+      setProfile(data.profile)
+      return data
     } finally {
       setLoading(false)
     }
   }
 
-  async function logout(): Promise<void> {
-    setUser(null)
+  async function logout() {
     await supabase.auth.signOut()
+    setUser(null)
+    setProfile(null)
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        isAdmin:     user?.perfil === 'admin',
-        isConsultor: user?.perfil === 'consultor',
-        isCliente:   user?.perfil === 'cliente',
-      }}
-    >
+    <AuthContext.Provider value={{ user, profile, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
-}
+export const useAuth = () => useContext(AuthContext)
