@@ -1,11 +1,11 @@
-﻿import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Pencil, PowerOff, Shield } from 'lucide-react';
 import { UserModal } from './UserModal';
 import { PermissionsModal } from './PermissionsModal';
 import { Button } from '../shared/Button';
 import { Avatar } from '../shared/Avatar';
-import { useUsers } from '../../hooks/useUsers';
 import { useData } from '../../contexts/DataContext';
+import { supabase } from '../../services/supabase';
 import type { User, CreateUserInput } from '../../types';
 
 const PROFILE_LABEL: Record<string, string> = {
@@ -20,24 +20,102 @@ const PROFILE_COLOR: Record<string, string> = {
   cliente: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-400/10 border-green-200 dark:border-green-400/20',
 };
 
+function mapProfile(p: Record<string, unknown>): User {
+  return {
+    id: String(p.id ?? ''),
+    nome: String(p.nome ?? ''),
+    login: String(p.login ?? p.email ?? ''),
+    senha: '',
+    email: String(p.email ?? ''),
+    cargo: String(p.cargo ?? ''),
+    perfil: (p.perfil as User['perfil']) ?? 'consultor',
+    especialidade: String(p.especialidade ?? ''),
+    ativo: Boolean(p.ativo ?? true),
+    projectsLinked: Array.isArray(p.projectsLinked) ? (p.projectsLinked as string[]) : [],
+    permissions: (p.permissions as Record<string, boolean>) ?? {},
+  };
+}
+
 export function UserTable() {
-  const { users, createUser, updateUser } = useUsers();
   const { projects } = useData();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editTarget, setEditTarget] = useState<User | undefined>();
   const [permTarget, setPermTarget] = useState<User | undefined>();
 
-  const handleSave = (data: CreateUserInput) => {
-    if (editTarget) {
-      updateUser(editTarget.id, data);
-    } else {
-      createUser(data);
+  async function fetchUsers() {
+    setLoading(true);
+    const { data, error: err } = await supabase.from('profiles').select('*');
+    if (err) setError(err.message);
+    else setUsers((data ?? []).map(mapProfile));
+    setLoading(false);
+  }
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const handleSave = async (data: CreateUserInput) => {
+    setError('');
+    setSaving(true);
+    try {
+      if (editTarget) {
+        const { error: err } = await supabase
+          .from('profiles')
+          .update({
+            nome: data.nome,
+            login: data.login,
+            email: data.email,
+            cargo: data.cargo,
+            perfil: data.perfil,
+            especialidade: data.especialidade,
+            projectsLinked: data.projectsLinked,
+          })
+          .eq('id', editTarget.id);
+        if (err) throw new Error(err.message);
+        setUsers((prev) =>
+          prev.map((u) => u.id === editTarget.id ? { ...u, ...data, senha: '' } : u),
+        );
+      } else {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify(data),
+          },
+        );
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error ?? 'Erro ao criar usuário');
+        await fetchUsers();
+      }
+      setEditTarget(undefined);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao salvar usuário');
+    } finally {
+      setSaving(false);
     }
-    setEditTarget(undefined);
   };
 
-  const toggleActive = (u: User) => {
-    updateUser(u.id, { ativo: !u.ativo });
+  const toggleActive = async (u: User) => {
+    const { error: err } = await supabase
+      .from('profiles')
+      .update({ ativo: !u.ativo })
+      .eq('id', u.id);
+    if (!err) setUsers((prev) => prev.map((x) => x.id === u.id ? { ...x, ativo: !x.ativo } : x));
+  };
+
+  const updatePermissions = async (permissions: Record<string, boolean>) => {
+    if (!permTarget) return;
+    const { error: err } = await supabase
+      .from('profiles')
+      .update({ permissions })
+      .eq('id', permTarget.id);
+    if (!err) setUsers((prev) => prev.map((u) => u.id === permTarget.id ? { ...u, permissions } : u));
   };
 
   return (
@@ -52,6 +130,12 @@ export function UserTable() {
         </Button>
       </div>
 
+      {error && (
+        <p className="text-sm text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg px-3 py-2">
+          {error}
+        </p>
+      )}
+
       <div className="bg-white dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/8 rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -64,7 +148,19 @@ export function UserTable() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-white/30 text-sm">
+                  Carregando usuários...
+                </td>
+              </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-8 text-center text-slate-400 dark:text-white/30 text-sm">
+                  Nenhum usuário encontrado.
+                </td>
+              </tr>
+            ) : users.map((u) => (
               <tr key={u.id} className="border-b border-slate-50 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors">
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-3">
@@ -77,8 +173,8 @@ export function UserTable() {
                 </td>
                 <td className="px-5 py-3.5 text-slate-500 dark:text-white/60 hidden md:table-cell">{u.cargo || '—'}</td>
                 <td className="px-5 py-3.5">
-                  <span className={`text-xs px-2.5 py-1 rounded-full border ${PROFILE_COLOR[u.perfil]}`}>
-                    {PROFILE_LABEL[u.perfil]}
+                  <span className={`text-xs px-2.5 py-1 rounded-full border ${PROFILE_COLOR[u.perfil] ?? ''}`}>
+                    {PROFILE_LABEL[u.perfil] ?? u.perfil}
                   </span>
                 </td>
                 <td className="px-5 py-3.5 hidden sm:table-cell">
@@ -115,6 +211,10 @@ export function UserTable() {
         </table>
       </div>
 
+      {saving && (
+        <p className="text-xs text-slate-400 dark:text-white/40 text-center">Salvando...</p>
+      )}
+
       <UserModal
         open={showModal}
         onClose={() => { setShowModal(false); setEditTarget(undefined); }}
@@ -128,10 +228,9 @@ export function UserTable() {
           open
           onClose={() => setPermTarget(undefined)}
           user={permTarget}
-          onSave={(permissions) => updateUser(permTarget.id, { permissions })}
+          onSave={updatePermissions}
         />
       )}
     </div>
   );
 }
-
