@@ -23,12 +23,13 @@ const SIZES = {
 };
 
 export function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
-  const initials = name
+  const initials = (name ?? '')
     .split(' ')
+    .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0])
     .join('')
-    .toUpperCase();
+    .toUpperCase() || '?';
 
   return (
     <span

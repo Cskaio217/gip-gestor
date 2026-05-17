@@ -14,8 +14,9 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, onEnter, onEdit, onDelete, canManage }: ProjectCardProps) {
-  const clientInitials = project.cliente
+  const clientInitials = (project.cliente ?? '')
     .split(' ')
+    .filter(Boolean)
     .slice(0, 2)
     .map((w) => w[0])
     .join('')
