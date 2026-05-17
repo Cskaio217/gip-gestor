@@ -14,11 +14,8 @@ import type {
   CardLink,
   Comment,
   Label,
-  CreateProjectInput,
-  CreateCardInput,
-  CreateUserInput,
 } from '../types'
-import { DEFAULT_PRODUCT_TYPES, DEFAULT_COLUMN_TITLES, DEFAULT_PROFILE_PERMISSIONS } from '../constants'
+import { DEFAULT_PRODUCT_TYPES } from '../constants'
 
 // ── Tipos internos de linha do banco ─────────────────────────────────────────
 
