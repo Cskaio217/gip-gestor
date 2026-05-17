@@ -1,19 +1,20 @@
-# Variáveis de ambiente — NUNCA commitar arquivos com valores reais
-.env
-.env.local
-.env.development
-.env.production
-.env.*.local
-
-# Dependências
+# Dependencies
 node_modules/
 
-# Build
+# Build outputs
 dist/
 dist-ssr/
 
+# Vite / env
+*.local
+.vite/
+.env
+.env.local
+.env.*.local
+
 # Editor
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
 *.suo
 *.ntvs*
@@ -21,14 +22,18 @@ dist-ssr/
 *.sln
 *.sw?
 
-# Sistema operacional
+# OS
 .DS_Store
 Thumbs.db
 
 # Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# TypeScript
+*.tsbuildinfo
