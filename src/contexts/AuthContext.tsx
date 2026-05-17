@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import type { User } from '../types'
-import { signIn as apiSignIn, signOut as apiSignOut, getSessionUser } from '../services/api'
 import { supabase } from '../services/supabase'
 
 interface AuthContextValue {
@@ -15,42 +14,92 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+// Busca perfil do usuário autenticado no Supabase e monta o objeto User da app.
+// Chamado tanto no mount quanto em eventos onAuthStateChange.
+async function fetchProfile(userId: string): Promise<User | null> {
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .is('deleted_at', null)
+    .single()
+
+  if (error || !profile || !profile.ativo) return null
+
+  const { data: members } = await supabase
+    .from('project_members')
+    .select('project_id')
+    .eq('user_id', userId)
+    .is('deleted_at', null)
+
+  return {
+    id: profile.id,
+    nome: profile.nome,
+    login: profile.login,
+    senha: '',            // Senha nunca retornada — gerenciada pelo Supabase Auth
+    email: profile.email,
+    cargo: profile.cargo,
+    perfil: profile.perfil as User['perfil'],
+    especialidade: profile.especialidade,
+    ativo: profile.ativo,
+    projectsLinked: (members ?? []).map((m: { project_id: string }) => m.project_id),
+    permissions: profile.permissions ?? {},
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Restaurar sessão existente ao carregar
-    getSessionUser().then((u) => {
-      setUser(u)
+    // Restaurar sessão existente (token salvo pelo SDK no localStorage do browser)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id)
+        setUser(profile)
+      }
       setLoading(false)
     })
 
-    // Sincronizar com mudanças de sessão (outra aba, token expirado)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        const u = await getSessionUser()
-        setUser(u)
+    // Reagir a mudanças de sessão: login em outra aba, expiração de token, etc.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT' || !session) {
+          setUser(null)
+          setLoading(false)
+          return
+        }
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          const profile = await fetchProfile(session.user.id)
+          setUser(profile)
+          setLoading(false)
+        }
       }
-    })
+    )
 
     return () => subscription.unsubscribe()
   }, [])
 
   const login = async (email: string, senha: string): Promise<boolean> => {
-    const found = await apiSignIn(email, senha)
-    if (found) {
-      setUser(found)
-      return true
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password: senha,
+    })
+    if (error || !data.user) return false
+
+    const profile = await fetchProfile(data.user.id)
+    if (!profile) {
+      await supabase.auth.signOut()
+      return false
     }
-    return false
+
+    setUser(profile)
+    return true
   }
 
   const logout = async (): Promise<void> => {
-    setUser(null)      // Imediato — limpa antes do async para que navigate() no App funcione sem await
-    await apiSignOut() // Invalida token no servidor em background
+    setUser(null)               // Limpa imediatamente — permite navigate() sem await no chamador
+    await supabase.auth.signOut() // Invalida token no servidor
   }
 
   return (
