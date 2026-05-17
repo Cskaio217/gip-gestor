@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>GIP — Redirecionando...</title>
+  <script>
+    // Solução para SPA routing no GitHub Pages.
+    // GitHub Pages retorna 404 para rotas que não são arquivos reais.
+    // Este script captura a URL, converte para query string e redireciona
+    // para index.html, onde o React Router retoma o controle.
+    (function () {
+      var l = window.location;
+      var segmentsToKeep = 1; // Número de segmentos do base path (nome do repositório)
+      var path = l.pathname.slice(1).split('/');
+      var query = path.slice(segmentsToKeep).join('/');
+      var search = l.search ? '&q=' + l.search.slice(1) : '';
+      var hash = l.hash ? l.hash : '';
+
+      var redirect =
+        l.protocol + '//' + l.hostname +
+        (l.port ? ':' + l.port : '') +
+        '/' + path.slice(0, segmentsToKeep).join('/') +
+        '/?p=/' + query + search + hash;
+
+      l.replace(redirect);
+    })();
+  </script>
+</head>
+<body>
+  <p>Redirecionando...</p>
+</body>
+</html>
