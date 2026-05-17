@@ -18,7 +18,7 @@ export function useProjects(filters?: Partial<ProjectFilters>) {
     let result = projects.filter((p) => !p.deletedAt);
     if (filters?.search) {
       const q = filters.search.toLowerCase();
-      result = result.filter((p) => p.cliente.toLowerCase().includes(q) || p.nome.toLowerCase().includes(q));
+      result = result.filter((p) => (p.cliente?.toLowerCase() ?? '').includes(q) || (p.nome?.toLowerCase() ?? '').includes(q));
     }
     if (filters?.status) {
       result = result.filter((p) => p.status === filters.status);

@@ -1,12 +1,44 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '../services/supabase'
+import { StorageService } from '../services/storage'
+import type { User } from '../types'
 
-const AuthContext = createContext<any>(null)
+interface AuthContextValue {
+  user: User | null
+  loading: boolean
+  isAdmin: boolean
+  isConsultor: boolean
+  isCliente: boolean
+  login: (email: string, password: string) => Promise<unknown>
+  logout: () => Promise<void>
+}
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Restore session on mount — Supabase persists the token; we look up the
+    // matching app profile from localStorage so components get the right shape.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        const users = StorageService.getUsers()
+        const profile = users.find((u) => u.email === session.user.email) ?? null
+        setUser(profile)
+      }
+      setLoading(false)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   async function login(email: string, password: string) {
     setLoading(true)
@@ -17,10 +49,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ email, password })
-        }
+          body: JSON.stringify({ email, password }),
+        },
       )
 
       const data = await response.json()
@@ -28,11 +60,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await supabase.auth.setSession({
         access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token
+        refresh_token: data.session.refresh_token,
       })
 
-      setUser(data.user)
-      setProfile(data.profile)
+      // Prefer the profile returned by the edge function; fall back to
+      // looking it up locally so all expected fields are guaranteed.
+      const profile: User = data.profile ?? StorageService.getUsers().find(
+        (u) => u.email === email,
+      ) ?? null
+
+      setUser(profile ? { ...profile, projectsLinked: profile.projectsLinked ?? [] } : null)
       return data
     } finally {
       setLoading(false)
@@ -42,14 +79,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function logout() {
     await supabase.auth.signOut()
     setUser(null)
-    setProfile(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        isAdmin: user?.perfil === 'admin',
+        isConsultor: user?.perfil === 'consultor',
+        isCliente: user?.perfil === 'cliente',
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  return ctx
+}

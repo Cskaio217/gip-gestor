@@ -76,7 +76,7 @@ export function TrashModal({ open, onClose }: TrashModalProps) {
                       {p.clientLogo ? (
                         <img src={p.clientLogo} alt={p.cliente} className="w-9 h-9 rounded-lg object-contain" />
                       ) : (
-                        <span className="text-xs font-bold text-[#CC0000]">{p.cliente.slice(0, 2).toUpperCase()}</span>
+                        <span className="text-xs font-bold text-[#CC0000]">{(p.cliente ?? '??').slice(0, 2).toUpperCase()}</span>
                       )}
                     </div>
 

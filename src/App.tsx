@@ -92,8 +92,8 @@ function DashboardPage() {
   const { user } = useAuth();
 
   // Clientes são redirecionados direto para o projeto vinculado
-  if (user?.perfil === 'cliente' && (user.projectsLinked?.length ?? 0) > 0) {
-    return <Navigate to={`/projeto/${user.projectsLinked[0]}`} replace />;
+  if (user?.perfil === 'cliente' && (user?.projectsLinked?.length ?? 0) > 0) {
+    return <Navigate to={`/projeto/${user.projectsLinked?.[0]}`} replace />;
   }
 
   return (

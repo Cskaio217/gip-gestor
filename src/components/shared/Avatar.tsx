@@ -33,8 +33,8 @@ export function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full font-semibold text-white flex-shrink-0 ${SIZES[size]} ${colorForName(name)} ${className}`}
-      title={name}
+      className={`inline-flex items-center justify-center rounded-full font-semibold text-white flex-shrink-0 ${SIZES[size]} ${colorForName(name ?? '')} ${className}`}
+      title={name ?? ''}
     >
       {initials}
     </span>
