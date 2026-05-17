@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from 'react';
+﻿import { useState, useEffect, type FormEvent } from 'react';
 import { Modal } from '../shared/Modal';
 import { Button } from '../shared/Button';
 import { Input } from '../shared/Input';
@@ -14,18 +14,25 @@ interface UserModalProps {
   initial?: User;
 }
 
-export function UserModal({ open, onClose, onSave, projects, initial }: UserModalProps) {
-  const blank: CreateUserInput = {
+function toForm(initial?: User): CreateUserInput {
+  return {
     nome: initial?.nome ?? '',
     login: initial?.login ?? '',
-    senha: initial?.senha ?? '',
+    senha: '',
     email: initial?.email ?? '',
     cargo: initial?.cargo ?? '',
     perfil: initial?.perfil ?? 'consultor',
     especialidade: initial?.especialidade ?? '',
     projectsLinked: initial?.projectsLinked ?? [],
   };
-  const [form, setForm] = useState<CreateUserInput>(blank);
+}
+
+export function UserModal({ open, onClose, onSave, projects, initial }: UserModalProps) {
+  const [form, setForm] = useState<CreateUserInput>(() => toForm(initial));
+
+  useEffect(() => {
+    if (open) setForm(toForm(initial));
+  }, [open, initial]);
 
   const set = <K extends keyof CreateUserInput>(key: K, value: CreateUserInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
