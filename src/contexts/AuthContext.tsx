@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react'
 import type { User as AuthUser } from '@supabase/supabase-js'
 import type { User } from '../types'
 import { supabase } from '../services/supabase'
@@ -15,23 +15,21 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-// Monta o objeto User da app a partir do usuário autenticado.
-// Usa maybeSingle() — não lança erro quando o perfil ainda não existe.
-// Se não houver perfil na tabela, faz fallback nos metadados do Supabase Auth.
+// Monta o User da app a partir do usuário autenticado do Supabase.
+// maybeSingle() não lança erro quando a linha não existe.
+// Fallback para metadados do auth se o perfil ainda não foi criado.
 async function buildUser(authUser: AuthUser): Promise<User> {
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', authUser.id)
-    .maybeSingle()                     // ← nunca lança erro por 0 linhas
+    .maybeSingle()
 
   const meta = authUser.user_metadata ?? {}
 
   if (!profile) {
-    // Perfil ainda não existe na tabela (seed não rodou, trigger pendente…)
-    // Usa metadados do auth como fallback para não bloquear o acesso.
     return {
-      id: authUser.id,
+      id:            authUser.id,
       nome:          (meta.nome          as string) ?? authUser.email?.split('@')[0] ?? 'Usuário',
       login:         (meta.login         as string) ?? authUser.email?.split('@')[0] ?? '',
       senha:         '',
@@ -67,42 +65,67 @@ async function buildUser(authUser: AuthUser): Promise<User> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser]       = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Impede dupla inicialização no React 18 StrictMode (dev).
+  // Em produção (GitHub Pages) useEffect só roda uma vez — sem impacto.
+  const initialized = useRef(false)
+
+  // Referência ao timeout de segurança para poder cancelá-lo quando
+  // onAuthStateChange responder antes dos 3 segundos.
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
-    // onAuthStateChange é a ÚNICA fonte de verdade sobre sessão.
-    // Dispara INITIAL_SESSION imediatamente com a sessão atual (ou null).
-    // Isso elimina a race condition de chamar getSession() em paralelo.
+    if (initialized.current) return
+    initialized.current = true
+
+    // Timeout de segurança: desbloqueia o loading após 3s caso o Supabase
+    // não responda (rede lenta, URL errada, etc.).
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false)
+    }, 3000)
+
+    // onAuthStateChange é a ÚNICA fonte de verdade sobre a sessão.
+    // Dispara INITIAL_SESSION imediatamente com a sessão atual (ou null),
+    // eliminando a necessidade de chamar getSession() separadamente.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        // Cancelar o timeout de segurança — já temos resposta
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+          timeoutRef.current = null
+        }
+
         if (!session?.user) {
           setUser(null)
           setLoading(false)
           return
         }
-        // INITIAL_SESSION, SIGNED_IN e TOKEN_REFRESHED com sessão válida
+
         const appUser = await buildUser(session.user)
         setUser(appUser)
         setLoading(false)
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const login = async (email: string, senha: string): Promise<boolean> => {
     // ETAPA 1 — Autenticar com Supabase Auth.
-    // Retorna false apenas se as credenciais estiverem erradas.
+    // false apenas se as credenciais estiverem erradas.
     const { error } = await supabase.auth.signInWithPassword({
       email:    email.trim().toLowerCase(),
       password: senha,
     })
-
     if (error) return false
 
-    // ETAPA 2 — O onAuthStateChange dispara SIGNED_IN e chama buildUser().
-    // Não buscamos o perfil aqui para evitar chamada duplicada.
+    // ETAPA 2 — onAuthStateChange dispara SIGNED_IN e chama buildUser().
+    // Não duplicamos a busca de perfil aqui.
     return true
   }
 

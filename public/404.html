@@ -1,32 +1,27 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>GIP — Redirecionando...</title>
   <script>
-    // Solução para SPA routing no GitHub Pages.
-    // GitHub Pages retorna 404 para rotas que não são arquivos reais.
-    // Este script captura a URL, converte para query string e redireciona
-    // para index.html, onde o React Router retoma o controle.
-    (function () {
-      var l = window.location;
-      var segmentsToKeep = 1; // Número de segmentos do base path (nome do repositório)
-      var path = l.pathname.slice(1).split('/');
-      var query = path.slice(segmentsToKeep).join('/');
-      var search = l.search ? '&q=' + l.search.slice(1) : '';
-      var hash = l.hash ? l.hash : '';
-
-      var redirect =
-        l.protocol + '//' + l.hostname +
-        (l.port ? ':' + l.port : '') +
-        '/' + path.slice(0, segmentsToKeep).join('/') +
-        '/?p=/' + query + search + hash;
-
-      l.replace(redirect);
-    })();
+    // Parte 1 do par spa-github-pages (rafgraph/spa-github-pages).
+    // GitHub Pages devolve 404 para qualquer rota que não seja um arquivo real.
+    // Este script recodifica o caminho como query string e redireciona para
+    // index.html, onde o script de decode (Parte 2) restaura a URL original
+    // antes do React carregar.
+    //
+    // pathSegmentsToKeep = 1 → mantém 1 segmento de path no prefix.
+    // Aqui o repositório ocupa 1 segmento: /gip-gestor/
+    var pathSegmentsToKeep = 1;
+    var l = window.location;
+    l.replace(
+      l.protocol + '//' + l.host +
+      l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+      l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
+    );
   </script>
 </head>
-<body>
-  <p>Redirecionando...</p>
-</body>
+<body></body>
 </html>
