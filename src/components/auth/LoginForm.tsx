@@ -1,36 +1,40 @@
-﻿import { useState, type FormEvent } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../shared/Button';
-import { Input } from '../shared/Input';
-import { Logo } from '../shared/Logo';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { useState, type FormEvent } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'
+import { Button } from '../shared/Button'
+import { Input } from '../shared/Input'
+import { Logo } from '../shared/Logo'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 
 export function LoginForm() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: string })?.from ?? '/dashboard';
+  const { login } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as { from?: string })?.from ?? '/dashboard'
 
-  const [loginStr, setLoginStr] = useState('');
-  const [senha, setSenha] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('')
+  const [senha, setSenha] = useState('')
+  const [showPwd, setShowPwd] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 300));
-    const ok = login(loginStr, senha);
-    if (ok) {
-      navigate(from, { replace: true });
-    } else {
-      setError('Usuário ou senha inválidos.');
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const ok = await login(email, senha)
+      if (ok) {
+        navigate(from, { replace: true })
+      } else {
+        setError('E-mail ou senha inválidos.')
+      }
+    } catch {
+      setError('Erro ao conectar. Verifique sua conexão e tente novamente.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false);
-  };
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-[#1E1E1E] flex items-center justify-center p-4">
@@ -54,15 +58,15 @@ export function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 mt-[13px]" />
+              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30 mt-[13px]" />
               <Input
-                label="Usuário"
-                type="text"
-                value={loginStr}
-                onChange={(e) => setLoginStr(e.target.value)}
-                placeholder="Seu login"
+                label="E-mail"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
                 className="pl-9"
-                autoComplete="username"
+                autoComplete="email"
                 required
               />
             </div>
@@ -105,7 +109,5 @@ export function LoginForm() {
         </div>
       </div>
     </div>
-  );
+  )
 }
-
-

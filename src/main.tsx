@@ -6,10 +6,6 @@ import App from './App.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 import { DataProvider } from './contexts/DataContext.tsx';
-import { initializeData } from './data/seed.ts';
-
-initializeData();
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

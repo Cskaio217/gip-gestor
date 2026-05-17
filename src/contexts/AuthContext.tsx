@@ -1,68 +1,77 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import type { User } from '../types';
-import { StorageService } from '../services/storage';
-import { AUTH_KEY } from '../constants';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import type { User } from '../types'
+import { signIn as apiSignIn, signOut as apiSignOut, getSessionUser } from '../services/api'
+import { supabase } from '../services/supabase'
 
 interface AuthContextValue {
-  user: User | null;
-  login: (loginStr: string, senha: string) => boolean;
-  logout: () => void;
-  isAdmin: boolean;
-  isConsultor: boolean;
-  isCliente: boolean;
+  user: User | null
+  loading: boolean
+  login: (email: string, senha: string) => Promise<boolean>
+  logout: () => Promise<void>
+  isAdmin: boolean
+  isConsultor: boolean
+  isCliente: boolean
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    try {
-      const saved = localStorage.getItem(AUTH_KEY);
-      if (!saved) return null;
-      const id = JSON.parse(saved) as string;
-      const users = StorageService.getUsers();
-      return users.find((u) => u.id === id) ?? null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const login = (loginStr: string, senha: string): boolean => {
-    const users = StorageService.getUsers();
-    const found = users.find(
-      (u) => u.login === loginStr.trim() && u.senha === senha && u.ativo,
-    );
+  useEffect(() => {
+    // Restaurar sessão existente ao carregar
+    getSessionUser().then((u) => {
+      setUser(u)
+      setLoading(false)
+    })
+
+    // Sincronizar com mudanças de sessão (outra aba, token expirado)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        const u = await getSessionUser()
+        setUser(u)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const login = async (email: string, senha: string): Promise<boolean> => {
+    const found = await apiSignIn(email, senha)
     if (found) {
-      setUser(found);
-      localStorage.setItem(AUTH_KEY, JSON.stringify(found.id));
-      return true;
+      setUser(found)
+      return true
     }
-    return false;
-  };
+    return false
+  }
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(AUTH_KEY);
-  };
+  const logout = async (): Promise<void> => {
+    setUser(null)      // Imediato — limpa antes do async para que navigate() no App funcione sem await
+    await apiSignOut() // Invalida token no servidor em background
+  }
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        loading,
         login,
         logout,
-        isAdmin: user?.perfil === 'admin',
+        isAdmin:     user?.perfil === 'admin',
         isConsultor: user?.perfil === 'consultor',
-        isCliente: user?.perfil === 'cliente',
+        isCliente:   user?.perfil === 'cliente',
       }}
     >
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
 export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  return ctx
 }

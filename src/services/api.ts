@@ -184,12 +184,11 @@ export async function fetchAllData(): Promise<AppData> {
 
 // ── Autenticação ──────────────────────────────────────────────────────────────
 
-export async function signIn(login: string, senha: string): Promise<User | null> {
-  // Resolve login (username) para email via função SQL pública
-  const { data: email } = await supabase.rpc('resolve_login_to_email', { p_login: login.trim() })
-  if (!email) return null
-
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })
+export async function signIn(email: string, senha: string): Promise<User | null> {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password: senha,
+  })
   if (error || !data.user) return null
 
   const { data: profile } = await supabase
