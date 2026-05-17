@@ -23,10 +23,26 @@ function buildMinimalUser(id: string, email: string): User {
     senha: '',
     cargo: '',
     especialidade: '',
-    perfil: 'admin',
+    perfil: 'consultor',
     ativo: true,
     permissions: {},
     projectsLinked: [],
+  }
+}
+
+function mapSupabaseProfile(p: Record<string, unknown>, fallbackEmail: string): User {
+  return {
+    id: String(p.id ?? ''),
+    nome: String(p.nome ?? fallbackEmail.split('@')[0] ?? 'Usuário'),
+    email: String(p.email ?? fallbackEmail),
+    login: String(p.login ?? p.email ?? fallbackEmail),
+    senha: '',
+    cargo: String(p.cargo ?? ''),
+    especialidade: String(p.especialidade ?? ''),
+    perfil: (p.perfil as User['perfil']) ?? 'consultor',
+    ativo: Boolean(p.ativo ?? true),
+    permissions: (p.permissions as Record<string, boolean>) ?? {},
+    projectsLinked: Array.isArray(p.projectsLinked) ? (p.projectsLinked as string[]) : [],
   }
 }
 
@@ -35,13 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const minimalUser = buildMinimalUser(
-          session.user.id,
-          session.user.email ?? '',
+        const email = session.user.email ?? ''
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+
+        setUser(
+          profileData
+            ? mapSupabaseProfile(profileData as Record<string, unknown>, email)
+            : buildMinimalUser(session.user.id, email),
         )
-        setUser(minimalUser)
       }
       setLoading(false)
     })
