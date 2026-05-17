@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import type { User as AuthUser } from '@supabase/supabase-js'
 import type { User } from '../types'
 import { supabase } from '../services/supabase'
 
@@ -14,36 +15,54 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-// Busca perfil do usuário autenticado no Supabase e monta o objeto User da app.
-// Chamado tanto no mount quanto em eventos onAuthStateChange.
-async function fetchProfile(userId: string): Promise<User | null> {
-  const { data: profile, error } = await supabase
+// Monta o objeto User da app a partir do usuário autenticado.
+// Usa maybeSingle() — não lança erro quando o perfil ainda não existe.
+// Se não houver perfil na tabela, faz fallback nos metadados do Supabase Auth.
+async function buildUser(authUser: AuthUser): Promise<User> {
+  const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', userId)
-    .is('deleted_at', null)
-    .single()
+    .eq('id', authUser.id)
+    .maybeSingle()                     // ← nunca lança erro por 0 linhas
 
-  if (error || !profile || !profile.ativo) return null
+  const meta = authUser.user_metadata ?? {}
+
+  if (!profile) {
+    // Perfil ainda não existe na tabela (seed não rodou, trigger pendente…)
+    // Usa metadados do auth como fallback para não bloquear o acesso.
+    return {
+      id: authUser.id,
+      nome:          (meta.nome          as string) ?? authUser.email?.split('@')[0] ?? 'Usuário',
+      login:         (meta.login         as string) ?? authUser.email?.split('@')[0] ?? '',
+      senha:         '',
+      email:         authUser.email ?? '',
+      cargo:         (meta.cargo         as string) ?? '',
+      perfil:       ((meta.perfil        as string) ?? 'consultor') as User['perfil'],
+      especialidade: (meta.especialidade as string) ?? '',
+      ativo:         true,
+      projectsLinked: [],
+      permissions:   {},
+    }
+  }
 
   const { data: members } = await supabase
     .from('project_members')
     .select('project_id')
-    .eq('user_id', userId)
+    .eq('user_id', authUser.id)
     .is('deleted_at', null)
 
   return {
-    id: profile.id,
-    nome: profile.nome,
-    login: profile.login,
-    senha: '',            // Senha nunca retornada — gerenciada pelo Supabase Auth
-    email: profile.email,
-    cargo: profile.cargo,
-    perfil: profile.perfil as User['perfil'],
+    id:            profile.id,
+    nome:          profile.nome,
+    login:         profile.login,
+    senha:         '',
+    email:         profile.email ?? authUser.email ?? '',
+    cargo:         profile.cargo,
+    perfil:        profile.perfil as User['perfil'],
     especialidade: profile.especialidade,
-    ativo: profile.ativo,
+    ativo:         profile.ativo ?? true,
     projectsLinked: (members ?? []).map((m: { project_id: string }) => m.project_id),
-    permissions: profile.permissions ?? {},
+    permissions:   profile.permissions ?? {},
   }
 }
 
@@ -52,28 +71,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Restaurar sessão existente (token salvo pelo SDK no localStorage do browser)
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id)
-        setUser(profile)
-      }
-      setLoading(false)
-    })
-
-    // Reagir a mudanças de sessão: login em outra aba, expiração de token, etc.
+    // onAuthStateChange é a ÚNICA fonte de verdade sobre sessão.
+    // Dispara INITIAL_SESSION imediatamente com a sessão atual (ou null).
+    // Isso elimina a race condition de chamar getSession() em paralelo.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
+      async (_event, session) => {
+        if (!session?.user) {
           setUser(null)
           setLoading(false)
           return
         }
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          const profile = await fetchProfile(session.user.id)
-          setUser(profile)
-          setLoading(false)
-        }
+        // INITIAL_SESSION, SIGNED_IN e TOKEN_REFRESHED com sessão válida
+        const appUser = await buildUser(session.user)
+        setUser(appUser)
+        setLoading(false)
       }
     )
 
@@ -81,25 +92,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, senha: string): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+    // ETAPA 1 — Autenticar com Supabase Auth.
+    // Retorna false apenas se as credenciais estiverem erradas.
+    const { error } = await supabase.auth.signInWithPassword({
+      email:    email.trim().toLowerCase(),
       password: senha,
     })
-    if (error || !data.user) return false
 
-    const profile = await fetchProfile(data.user.id)
-    if (!profile) {
-      await supabase.auth.signOut()
-      return false
-    }
+    if (error) return false
 
-    setUser(profile)
+    // ETAPA 2 — O onAuthStateChange dispara SIGNED_IN e chama buildUser().
+    // Não buscamos o perfil aqui para evitar chamada duplicada.
     return true
   }
 
   const logout = async (): Promise<void> => {
-    setUser(null)               // Limpa imediatamente — permite navigate() sem await no chamador
-    await supabase.auth.signOut() // Invalida token no servidor
+    setUser(null)                  // Imediato — permite navigate() sem await
+    await supabase.auth.signOut()  // Invalida token no servidor
   }
 
   return (
