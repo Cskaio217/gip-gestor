@@ -48,10 +48,23 @@ export function UserTable() {
 
   async function fetchUsers() {
     setLoading(true);
-    const { data, error: err } = await supabase.from('profiles').select('*');
-    if (err) setError(err.message);
-    else setUsers((data ?? []).map(mapProfile));
-    setLoading(false);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-users`,
+        {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Erro ao buscar usuários');
+      setUsers((data as Record<string, unknown>[]).map(mapProfile));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao buscar usuários');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { fetchUsers(); }, []);
