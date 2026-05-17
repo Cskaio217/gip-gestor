@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '../services/supabase'
-import { StorageService } from '../services/storage'
 import type { User } from '../types'
 
 interface AuthContextValue {
@@ -15,18 +14,34 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function buildMinimalUser(id: string, email: string): User {
+  return {
+    id,
+    nome: email.split('@')[0] ?? 'Usuário',
+    email,
+    login: email,
+    senha: '',
+    cargo: '',
+    especialidade: '',
+    perfil: 'admin',
+    ativo: true,
+    permissions: {},
+    projectsLinked: [],
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Restore session on mount — Supabase persists the token; we look up the
-    // matching app profile from localStorage so components get the right shape.
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email) {
-        const users = StorageService.getUsers()
-        const profile = users.find((u) => u.email === session.user.email) ?? null
-        setUser(profile)
+      if (session?.user) {
+        const minimalUser = buildMinimalUser(
+          session.user.id,
+          session.user.email ?? '',
+        )
+        setUser(minimalUser)
       }
       setLoading(false)
     })
@@ -63,13 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refresh_token: data.session.refresh_token,
       })
 
-      // Prefer the profile returned by the edge function; fall back to
-      // looking it up locally so all expected fields are guaranteed.
-      const profile: User = data.profile ?? StorageService.getUsers().find(
-        (u) => u.email === email,
-      ) ?? null
+      const profile: User = data.profile ?? buildMinimalUser(
+        data.user?.id ?? '',
+        data.user?.email ?? email,
+      )
 
-      setUser(profile ? { ...profile, projectsLinked: profile.projectsLinked ?? [] } : null)
+      setUser({ ...profile, projectsLinked: profile.projectsLinked ?? [] })
       return data
     } finally {
       setLoading(false)
