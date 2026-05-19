@@ -398,7 +398,10 @@ export async function updateSettingsDb(patch: Partial<AppSettings>): Promise<voi
   if (patch.companyName  !== undefined) dbPatch.company_name  = patch.companyName
   if (patch.logo         !== undefined) dbPatch.logo          = patch.logo
   if (patch.productTypes !== undefined) dbPatch.product_types = patch.productTypes
-  await supabase.from('app_settings').update(dbPatch)
+  const { data: row } = await supabase.from('app_settings').select('id').single()
+  if (row?.id !== undefined) {
+    await supabase.from('app_settings').update(dbPatch).eq('id', row.id)
+  }
 }
 
 // ── Compatibilidade com StorageService (não usada diretamente) ────────────────

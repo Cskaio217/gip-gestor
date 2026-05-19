@@ -1,15 +1,22 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { Input } from '../shared/Input';
 import { Button } from '../shared/Button';
 import { useData } from '../../contexts/DataContext';
 
 export function GeneralSettings() {
-  const { settings, updateSettings } = useData();
+  const { settings, updateSettings, loading } = useData();
   const [companyName, setCompanyName] = useState(settings.companyName);
   const [productTypes, setProductTypes] = useState<string[]>(settings.productTypes);
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setCompanyName(settings.companyName);
+      setProductTypes([...settings.productTypes]);
+    }
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = () => {
     updateSettings({ companyName, productTypes });
