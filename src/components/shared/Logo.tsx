@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logoGip from '../../assets/Logo-GIP.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -21,7 +22,7 @@ export function Logo({ size = 'md', showText = false }: LogoProps) {
     </div>
   ) : (
     <img
-      src="/assets/logo-gip.png"
+      src={logoGip}
       alt="GIP"
       className={`${s.box} rounded-lg object-contain flex-shrink-0`}
       onError={() => setImgError(true)}
