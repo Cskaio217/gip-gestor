@@ -121,7 +121,7 @@ export function CardModal({
       {/* Color banner strip (when no cover) */}
       {!card.coverImage && card.cardColor && (
         <div
-          className="relative -mx-6 -mt-4 mb-4 h-32 flex items-start justify-end px-4 pt-3"
+          className="relative -mx-6 -mt-4 mb-4 h-20 flex items-start justify-end px-4 pt-2"
           style={{ backgroundColor: card.cardColor }}
         >
           {canEdit && (

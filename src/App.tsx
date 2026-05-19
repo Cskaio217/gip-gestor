@@ -28,7 +28,7 @@ function AppHeader() {
   };
 
   return (
-    <header className="flex-shrink-0 h-14 bg-white dark:bg-[#1E1E1E] border-b border-slate-200 dark:border-white/10 px-6 flex items-center justify-between gap-4 shadow-sm dark:shadow-none">
+    <header className="flex-shrink-0 h-14 bg-white dark:bg-[#1E1E1E] border-b border-slate-200 dark:border-white/10 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 shadow-sm dark:shadow-none">
       <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2.5">
         <Logo size="md" showText />
       </button>
@@ -97,9 +97,9 @@ function DashboardPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-['Outfit']">Projetos</h2>
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
+      <div className="mb-4 sm:mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-['Outfit']">Projetos</h2>
         <p className="text-sm text-slate-400 dark:text-white/40 mt-1">
           {new Date().toLocaleDateString('pt-BR', {
             weekday: 'long',
@@ -134,9 +134,9 @@ function AdminPanel() {
   if (!canAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-['Outfit']">Administração</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-['Outfit']">Administração</h2>
         <p className="text-sm text-slate-400 dark:text-white/40 mt-1">Gerencie usuários e configurações do sistema.</p>
       </div>
 

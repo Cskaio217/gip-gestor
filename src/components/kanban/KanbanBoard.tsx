@@ -168,8 +168,8 @@ export function KanbanBoard({ projectId, showCalendar = false }: KanbanBoardProp
   return (
     <div className="flex flex-col h-full min-h-screen bg-slate-50 dark:bg-[#1E1E1E]">
       {/* Header */}
-      <div className="flex-shrink-0 bg-white dark:bg-[#1E1E1E] border-b border-slate-200 dark:border-white/10 px-6 py-4">
-        <div className="flex flex-wrap items-center gap-4 justify-between">
+      <div className="flex-shrink-0 bg-white dark:bg-[#1E1E1E] border-b border-slate-200 dark:border-white/10 px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-between">
           <div className="flex items-center gap-4 min-w-0">
             <button
               onClick={() => navigate('/dashboard')}
@@ -201,8 +201,8 @@ export function KanbanBoard({ projectId, showCalendar = false }: KanbanBoardProp
             </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-36">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="w-28 sm:w-36 hidden xs:block sm:block">
               <ProgressBar value={progress} showLabel size="md" />
             </div>
 
@@ -263,7 +263,7 @@ export function KanbanBoard({ projectId, showCalendar = false }: KanbanBoardProp
       </div>
 
       {/* Board */}
-      <div className="flex-1 overflow-x-auto px-6 py-6">
+      <div className="flex-1 overflow-x-auto px-2 sm:px-6 py-3 sm:py-6">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -310,7 +310,7 @@ export function KanbanBoard({ projectId, showCalendar = false }: KanbanBoardProp
 
               {/* Add column */}
               {canEdit && (
-                <div className="w-72 flex-shrink-0">
+                <div className="w-[280px] sm:w-72 flex-shrink-0">
                   {addingCol ? (
                     <div className="bg-white dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-3">
                       <input

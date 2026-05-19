@@ -123,7 +123,7 @@ export function KanbanColumn({
     <div
       ref={setColRef}
       style={colStyle}
-      className="flex flex-col w-72 flex-shrink-0 bg-slate-100 dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/8 rounded-2xl"
+      className="flex flex-col w-[280px] sm:w-72 flex-shrink-0 bg-slate-100 dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/8 rounded-2xl"
     >
       {/* Column Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-white/5">

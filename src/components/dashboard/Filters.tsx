@@ -14,9 +14,9 @@ export function Filters({ filters, onChange, consultores, productTypes }: Filter
   const hasAny = filters.search || filters.status || filters.responsavelId || filters.produto;
 
   return (
-    <div className="flex flex-wrap gap-3 items-end">
+    <div className="flex flex-wrap gap-2 sm:gap-3 items-end">
       {/* Search */}
-      <div className="relative flex-1 min-w-[200px]">
+      <div className="relative flex-1 min-w-[160px]">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/30" />
         <input
           type="text"
@@ -31,7 +31,7 @@ export function Filters({ filters, onChange, consultores, productTypes }: Filter
       <select
         value={filters.status}
         onChange={(e) => onChange({ status: e.target.value as ProjectFilters['status'] })}
-        className="bg-white dark:bg-[#1E1E1E] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CC0000]/60 transition-colors"
+        className="flex-1 sm:flex-none min-w-[130px] bg-white dark:bg-[#1E1E1E] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CC0000]/60 transition-colors"
       >
         <option value="">Todos os status</option>
         {PROJECT_STATUS_LIST.map((s) => (
@@ -43,7 +43,7 @@ export function Filters({ filters, onChange, consultores, productTypes }: Filter
       <select
         value={filters.responsavelId}
         onChange={(e) => onChange({ responsavelId: e.target.value })}
-        className="bg-white dark:bg-[#1E1E1E] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CC0000]/60 transition-colors"
+        className="flex-1 sm:flex-none min-w-[130px] bg-white dark:bg-[#1E1E1E] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CC0000]/60 transition-colors"
       >
         <option value="">Todos os responsáveis</option>
         {consultores.map((u) => (
@@ -55,7 +55,7 @@ export function Filters({ filters, onChange, consultores, productTypes }: Filter
       <select
         value={filters.produto}
         onChange={(e) => onChange({ produto: e.target.value })}
-        className="bg-white dark:bg-[#1E1E1E] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CC0000]/60 transition-colors"
+        className="flex-1 sm:flex-none min-w-[130px] bg-white dark:bg-[#1E1E1E] border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#CC0000]/60 transition-colors"
       >
         <option value="">Todos os produtos</option>
         {productTypes.map((p) => (

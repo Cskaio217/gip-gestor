@@ -31,7 +31,7 @@ export function GeneralSettings() {
         Configurações gerais
       </h3>
 
-      <div className="bg-white dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/8 rounded-2xl p-6 space-y-5 shadow-sm dark:shadow-none">
+      <div className="bg-white dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/8 rounded-2xl p-4 sm:p-6 space-y-5 shadow-sm dark:shadow-none">
         <Input
           label="Nome da empresa"
           value={companyName}

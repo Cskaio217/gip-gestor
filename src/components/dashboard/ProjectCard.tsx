@@ -78,17 +78,17 @@ export function ProjectCard({ project, onEnter, onEdit, onDelete, canManage }: P
       {/* Actions */}
       <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/5">
         {canManage && (
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
             <button
               onClick={onEdit}
-              className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
             >
               <Pencil size={13} />
             </button>
             {onDelete && (
               <button
                 onClick={onDelete}
-                className="p-1.5 text-slate-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-lg transition-colors"
+                className="p-2 text-slate-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-400/10 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
               >
                 <Trash2 size={13} />
               </button>
