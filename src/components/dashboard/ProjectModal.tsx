@@ -1,4 +1,4 @@
-import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useEffect, type FormEvent, type ChangeEvent } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { Button } from '../shared/Button';
@@ -40,6 +40,20 @@ export function ProjectModal({
 
   const [form, setForm] = useState<CreateProjectInput>(blank);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setForm({
+      nome: initial?.nome ?? '',
+      cliente: initial?.cliente ?? '',
+      produto: initial?.produto ?? productTypes[0] ?? '',
+      status: initial?.status ?? 'Em Andamento',
+      dataInicio: initial?.dataInicio ?? todayISO(),
+      dataFim: initial?.dataFim ?? '',
+      responsavelId: initial?.responsavelId ?? '',
+      descricao: initial?.descricao ?? '',
+      clientLogo: initial?.clientLogo ?? '',
+    });
+  }, [initial, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (key: keyof CreateProjectInput, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));

@@ -64,7 +64,7 @@ export function KanbanCard({
   // Resolve label — prefer new labelId system, fall back to legacy label color
   const activeLabel = labels.find((l) => l.id === card.labelId);
   const legacyLabelColor = !activeLabel && card.label ? CARD_LABEL_COLORS[card.label] : null;
-  const bannerColor = card.cardColor || activeLabel?.color || legacyLabelColor || null;
+  const labelBannerColor = !card.cardColor ? (activeLabel?.color || legacyLabelColor || null) : null;
 
   if (card.archived) return null;
 
@@ -85,9 +85,14 @@ export function KanbanCard({
           </div>
         )}
 
-        {/* Color banner (only when no cover image) */}
-        {!card.coverImage && bannerColor && (
-          <div className="w-full h-1.5" style={{ backgroundColor: bannerColor }} />
+        {/* Card color cover (full height, only when no image) */}
+        {!card.coverImage && card.cardColor && (
+          <div className="w-full h-20" style={{ backgroundColor: card.cardColor }} />
+        )}
+
+        {/* Label color thin stripe (only when no cover image and no card color) */}
+        {!card.coverImage && !card.cardColor && labelBannerColor && (
+          <div className="w-full h-1.5" style={{ backgroundColor: labelBannerColor }} />
         )}
 
         <div className="p-3.5">

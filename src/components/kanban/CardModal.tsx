@@ -10,19 +10,19 @@ import type { Card, User, Label } from '../../types';
 import { formatDate, isOverdue } from '../../utils/date';
 import { useData } from '../../contexts/DataContext';
 
-// ── Card cover colors (Trello-style palette aligned to GDR brand) ─────────────
+// ── Card cover colors (Trello palette) ───────────────────────────────────────
 
 const CARD_COLORS = [
-  '#CC0000', // GDR red
-  '#0F3460', // GDR deep blue
-  '#2D2D2D', // GDR navy
-  '#1A6B3A', // forest green
-  '#7C3AED', // violet
-  '#DB7C00', // amber
-  '#0E7490', // teal
-  '#BE185D', // pink
-  '#374151', // slate
-  '#1D4ED8', // blue
+  '#61BD4F', // verde
+  '#F2D600', // amarelo
+  '#FF9F1A', // laranja
+  '#EB5A46', // vermelho
+  '#C377E0', // roxo
+  '#0079BF', // azul
+  '#00C2E0', // ciano
+  '#51E898', // verde-limão
+  '#FF78CB', // rosa
+  '#344563', // marinha
 ];
 
 // ── Default label colors for new labels ──────────────────────────────────────
@@ -96,7 +96,7 @@ export function CardModal({
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      onUpdate({ coverImage: (ev.target?.result as string) ?? '' });
+      onUpdate({ coverImage: (ev.target?.result as string) ?? '', cardColor: '' });
     };
     reader.readAsDataURL(file);
   };
@@ -121,15 +121,15 @@ export function CardModal({
       {/* Color banner strip (when no cover) */}
       {!card.coverImage && card.cardColor && (
         <div
-          className="relative -mx-6 -mt-4 mb-4 h-10 flex items-center justify-end px-4"
+          className="relative -mx-6 -mt-4 mb-4 h-32 flex items-start justify-end px-4 pt-3"
           style={{ backgroundColor: card.cardColor }}
         >
           {canEdit && (
             <button
               onClick={() => onUpdate({ cardColor: '' })}
-              className="w-6 h-6 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors"
+              className="w-7 h-7 bg-black/30 hover:bg-black/50 rounded-full flex items-center justify-center text-white transition-colors"
             >
-              <X size={11} />
+              <X size={13} />
             </button>
           )}
         </div>
@@ -358,12 +358,12 @@ export function CardModal({
             )}
           </div>
 
-          {/* Card color picker */}
+          {/* Capa (cor + imagem) */}
           {canEdit && (
             <div>
               <p className="text-xs font-medium text-slate-500 dark:text-white/50 mb-2 flex items-center gap-1.5">
                 <Palette size={12} />
-                Cor de fundo
+                Capa
               </p>
               <div className="relative">
                 <button
@@ -372,57 +372,60 @@ export function CardModal({
                 >
                   {card.cardColor ? (
                     <>
-                      <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: card.cardColor }} />
-                      Trocar cor
+                      <span className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: card.cardColor }} />
+                      Editar capa
+                    </>
+                  ) : card.coverImage ? (
+                    <>
+                      <Image size={11} />
+                      Editar capa
                     </>
                   ) : (
                     <>
                       <Palette size={11} />
-                      Escolher cor
+                      Adicionar capa
                     </>
                   )}
                 </button>
 
                 {showColorPicker && (
-                  <div className="absolute z-10 mt-1 bg-white dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/10 rounded-xl shadow-lg p-3 w-full">
-                    <div className="grid grid-cols-5 gap-2 mb-2">
-                      {CARD_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => { onUpdate({ cardColor: c }); setShowColorPicker(false); }}
-                          className={`w-8 h-8 rounded-lg transition-all hover:scale-110 ${card.cardColor === c ? 'ring-2 ring-offset-1 ring-slate-400 dark:ring-white' : ''}`}
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
+                  <div className="absolute z-10 mt-1 bg-white dark:bg-[#2D2D2D] border border-slate-200 dark:border-white/10 rounded-xl shadow-lg p-3 w-full space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-400 dark:text-white/40 mb-2">Cores</p>
+                      <div className="grid grid-cols-5 gap-2">
+                        {CARD_COLORS.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => { onUpdate({ cardColor: c, coverImage: '' }); setShowColorPicker(false); }}
+                            className={`h-8 rounded-lg transition-all hover:scale-110 ${card.cardColor === c ? 'ring-2 ring-offset-1 ring-slate-400 dark:ring-white' : ''}`}
+                            style={{ backgroundColor: c }}
+                          />
+                        ))}
+                      </div>
                     </div>
-                    {card.cardColor && (
+
+                    <div>
+                      <p className="text-xs font-medium text-slate-400 dark:text-white/40 mb-2">Imagem</p>
                       <button
-                        onClick={() => { onUpdate({ cardColor: '' }); setShowColorPicker(false); }}
-                        className="text-xs text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors"
+                        onClick={() => { coverRef.current?.click(); setShowColorPicker(false); }}
+                        className="flex items-center gap-2 text-xs text-slate-500 dark:text-white/40 hover:text-slate-700 dark:hover:text-white border border-slate-200 dark:border-white/20 hover:border-slate-300 dark:hover:border-white/40 rounded-lg px-3 py-2 transition-all w-full"
                       >
-                        Sem cor
+                        <Image size={11} />
+                        {card.coverImage ? 'Trocar imagem' : 'Upload de imagem'}
+                      </button>
+                    </div>
+
+                    {(card.cardColor || card.coverImage) && (
+                      <button
+                        onClick={() => { onUpdate({ cardColor: '', coverImage: '' }); setShowColorPicker(false); }}
+                        className="text-xs text-slate-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors pt-2 border-t border-slate-100 dark:border-white/5 w-full text-left"
+                      >
+                        Remover capa
                       </button>
                     )}
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Cover image */}
-          {canEdit && (
-            <div>
-              <p className="text-xs font-medium text-slate-500 dark:text-white/50 mb-2 flex items-center gap-1.5">
-                <Image size={12} />
-                Imagem de capa
-              </p>
-              <button
-                onClick={() => coverRef.current?.click()}
-                className="flex items-center gap-2 text-xs text-slate-500 dark:text-white/40 hover:text-slate-700 dark:hover:text-white border border-dashed border-slate-200 dark:border-white/20 hover:border-slate-300 dark:hover:border-white/40 rounded-lg px-3 py-1.5 transition-all w-full"
-              >
-                <Image size={11} />
-                {card.coverImage ? 'Trocar imagem' : 'Upload de capa'}
-              </button>
               <input
                 ref={coverRef}
                 type="file"
